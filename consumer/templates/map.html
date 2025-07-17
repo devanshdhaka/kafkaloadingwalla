@@ -21,8 +21,8 @@
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
     let carMarkers = {};
-    let traveledPaths = {};    // ✅ Stores only the traveled points
-    let carPolylines = {};     // ✅ Dynamic growing polylines per car
+    let traveledPaths = {};    
+    let carPolylines = {};     
 
     async function fetchPositions() {
       const res = await fetch("/live");
@@ -48,10 +48,9 @@
             .setPopupContent(`<b>${car_id}</b><br>${new Date(car.timestamp*1000).toLocaleTimeString()}`);
         }
 
-        // ✅ Draw only the traveled polyline (not the full planned route)
+        // ✅ Draw only the traveled polyline dynamically
         if (!carPolylines[car_id]) {
           carPolylines[car_id] = L.polyline(traveledPaths[car_id], { color: "blue", weight: 3 }).addTo(map);
-          // Zoom initially on first car
           map.fitBounds(carPolylines[car_id].getBounds());
         } else {
           carPolylines[car_id].setLatLngs(traveledPaths[car_id]);
