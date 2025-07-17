@@ -16,40 +16,50 @@
   <div id="map"></div>
 
   <script>
+    // ✅ Initialize map
     const map = L.map('map').setView([28.4, 77.3], 12);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
     let carMarkers = {};
-    let routeLine = null;
+    let traveledPaths = {};    // ✅ Stores only the traveled points
+    let carPolylines = {};     // ✅ Dynamic growing polylines per car
 
     async function fetchPositions() {
       const res = await fetch("/live");
       const data = await res.json();
 
       const cars = data.positions;
-      const route = data.route;
 
-      // ✅ Draw the static route polyline once
-      if (!routeLine) {
-        routeLine = L.polyline(route, { color: "blue", weight: 3 }).addTo(map);
-        map.fitBounds(routeLine.getBounds());
-      }
-
-      // ✅ Update each car marker
       for (const car_id in cars) {
         const car = cars[car_id];
         const latLng = [car.lat, car.lon];
 
+        // ✅ Add this car’s traveled points step by step
+        if (!traveledPaths[car_id]) traveledPaths[car_id] = [];
+        traveledPaths[car_id].push(latLng);
+
+        // ✅ Place or update marker
         if (!carMarkers[car_id]) {
           carMarkers[car_id] = L.marker(latLng).addTo(map)
             .bindPopup(`<b>${car_id}</b><br>${new Date(car.timestamp*1000).toLocaleTimeString()}`);
         } else {
-          carMarkers[car_id].setLatLng(latLng)
+          carMarkers[car_id]
+            .setLatLng(latLng)
             .setPopupContent(`<b>${car_id}</b><br>${new Date(car.timestamp*1000).toLocaleTimeString()}`);
+        }
+
+        // ✅ Draw only the traveled polyline (not the full planned route)
+        if (!carPolylines[car_id]) {
+          carPolylines[car_id] = L.polyline(traveledPaths[car_id], { color: "blue", weight: 3 }).addTo(map);
+          // Zoom initially on first car
+          map.fitBounds(carPolylines[car_id].getBounds());
+        } else {
+          carPolylines[car_id].setLatLngs(traveledPaths[car_id]);
         }
       }
     }
 
+    // ✅ Fetch live updates every 2 sec
     setInterval(fetchPositions, 2000);
     fetchPositions();
   </script>
